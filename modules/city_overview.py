@@ -409,7 +409,7 @@ def show():
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🎛️ Filtros")
     
-    # Year range slider in sidebar
+    # Year range slider in sidebar - update session state directly
     sidebar_year_range = st.sidebar.slider(
         "📅 Rango de Años",
         min_value=min_year,
@@ -420,10 +420,8 @@ def show():
         help=f"Select a continuous range from {min_year} to {max_year}",
         key='sidebar_year_slider'
     )
-    # Update session state
-    if sidebar_year_range != st.session_state.year_range:
-        st.session_state.year_range = sidebar_year_range
-        st.rerun()
+    # Update session state without rerun
+    st.session_state.year_range = sidebar_year_range
     
     start_year_sidebar, end_year_sidebar = sidebar_year_range
     
@@ -435,7 +433,7 @@ def show():
     
     st.sidebar.markdown("---")
     
-    # Violence filter in sidebar
+    # Violence filter in sidebar - update session state directly
     violence_options = ["Todos los Delitos", "Solo Violentos", "Solo No Violentos"]
     sidebar_violence = st.sidebar.selectbox(
         "🔪 Tipo de Delito",
@@ -443,10 +441,8 @@ def show():
         index=violence_options.index(st.session_state.violence_filter),
         key='sidebar_violence_select'
     )
-    # Update session state
-    if sidebar_violence != st.session_state.violence_filter:
-        st.session_state.violence_filter = sidebar_violence
-        st.rerun()
+    # Update session state without rerun
+    st.session_state.violence_filter = sidebar_violence
     
     st.sidebar.markdown("---")
     
@@ -484,10 +480,8 @@ def show():
             help=f"Select a continuous range from {min_year} to {max_year}",
             key='top_year_slider'
         )
-        # Update session state
-        if top_year_range != st.session_state.year_range:
-            st.session_state.year_range = top_year_range
-            st.rerun()
+        # Update session state without rerun
+        st.session_state.year_range = top_year_range
         
         start_year, end_year = st.session_state.year_range
     
@@ -498,10 +492,8 @@ def show():
             index=violence_options.index(st.session_state.violence_filter),
             key='top_violence_select'
         )
-        # Update session state
-        if top_violence != st.session_state.violence_filter:
-            st.session_state.violence_filter = top_violence
-            st.rerun()
+        # Update session state without rerun
+        st.session_state.violence_filter = top_violence
     
     with col3:
         if st.button("🔄 Actualizar", use_container_width=True, key='top_refresh'):
@@ -624,9 +616,8 @@ def show():
         index=["Delitos Totales", "Desglose por Violencia"].index(st.session_state.breakdown_option),
         key='breakdown_radio'
     )
-    if breakdown_option != st.session_state.breakdown_option:
-        st.session_state.breakdown_option = breakdown_option
-        st.rerun()
+    # Update session state without rerun
+    st.session_state.breakdown_option = breakdown_option
     
     if st.session_state.breakdown_option == "Delitos Totales":
         time_series = filtered_df.groupby(filtered_df['fecha_hecho'].dt.to_period('M')).size().reset_index()
@@ -701,7 +692,6 @@ def show():
         
         # 2. Peak Hour Analysis
         if not filtered_df.empty and 'hour' in filtered_df.columns:
-            # Filter out null hours
             valid_hours_df = filtered_df[filtered_df['hour'].notna()]
             if not valid_hours_df.empty:
                 hourly_crimes = valid_hours_df.groupby('hour').size()
