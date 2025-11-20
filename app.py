@@ -1,0 +1,546 @@
+"""
+CDMX Crime Analytics Dashboard
+Main application entry point with authentication
+"""
+
+import streamlit as st
+from supabase import create_client
+import pandas as pd
+import os
+from dotenv import load_dotenv
+
+# ===============================
+# Load Environment Variables
+# ===============================
+load_dotenv()
+
+# ===============================
+# Configuration
+# ===============================
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "FGJ")
+SUPABASE_TABLE_CUADRANTS = os.getenv("SUPABASE_TABLE_CUADRANTS", "cuadrantes")
+
+# ===============================
+# App Configuration (MUST BE FIRST)
+# ===============================
+st.set_page_config(
+    page_title="Panel de Análisis de Delitos CDMX",
+    layout="wide",
+    page_icon="📊"
+)
+
+# ===============================
+# Authentication Functions
+# ===============================
+def login_user(email, password):
+    """Authenticate user and retrieve role from profiles table"""
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        user = auth_response.user
+        
+        if not user:
+            return None, None
+        
+        # Fetch user role from profiles table
+        user_data = supabase.table("profiles").select("rol").eq("id", user.id).single().execute()
+        rol = user_data.data["rol"] if user_data.data else None
+        
+        return user, rol
+    except Exception as e:
+        st.error(f"❌ Error al iniciar sesión: {e}")
+        return None, None
+
+def logout_user():
+    """Clear session state and log out user"""
+    st.session_state.clear()
+    st.rerun()
+
+def get_allowed_pages(rol):
+    """Return list of pages accessible to each role"""
+    role_pages = {
+        "ADMIN": [
+            "🏠 Inicio",
+            "🗺️ Mapa Interactivo",
+            "📈 Panorama de la Ciudad",
+            "🏛️ Panel de Alcaldías",
+            "🔍 Verificador de Datos",
+            "Predicciones"
+        ],
+        "FGJ": [
+            "🏠 Inicio",
+            "🗺️ Mapa Interactivo",
+            "📈 Panorama de la Ciudad",
+            "🏛️ Panel de Alcaldías",
+            "Predicciones"
+        ],
+        "THALES": [
+            "🏠 Inicio",
+            "🗺️ Mapa Interactivo",
+            "📈 Panorama de la Ciudad",
+            "🏛️ Panel de Alcaldías",
+            "🔍 Verificador de Datos",
+            "Predicciones"
+        ]
+    }
+    return role_pages.get(rol, ["🏠 Inicio"])
+
+# ===============================
+# Session State Initialization
+# ===============================
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.rol = None
+    st.session_state.user_email = None
+
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "🏠 Inicio"
+
+# ===============================
+# LOGIN PAGE
+# ===============================
+if not st.session_state.logged_in:
+    # Custom CSS for login page
+    st.markdown("""
+        <style>
+        .login-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .login-header {
+            text-align: center;
+            color: #0066CC;
+            margin-bottom: 2rem;
+        }
+        .login-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+            <div class="login-header">
+                <h1>📊</h1>
+                <h2>Panel de Análisis de Delitos CDMX</h2>
+                <p>Iniciar Sesión</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        with st.container():
+            email = st.text_input("📧 Correo electrónico", key="login_email")
+            password = st.text_input("🔒 Contraseña", type="password", key="login_password")
+            
+            if st.button("Iniciar sesión", use_container_width=True, type="primary"):
+                if email and password:
+                    with st.spinner("Verificando credenciales..."):
+                        user, rol = login_user(email, password)
+                        if user and rol:
+                            st.session_state.logged_in = True
+                            st.session_state.rol = rol
+                            st.session_state.user_email = email
+                            st.success("✅ Inicio de sesión exitoso")
+                            st.rerun()
+                        else:
+                            st.error("❌ Credenciales incorrectas o usuario no encontrado.")
+                else:
+                    st.warning("⚠️ Por favor ingresa correo y contraseña.")
+    
+    st.stop()
+
+# ===============================
+# MAIN APPLICATION (After Login)
+# ===============================
+
+# Import all pages
+from modules import Predictions, data_checker, alcaldias_dashboard, interactive_map, city_overview, predictions_page
+
+# ===============================
+# Data Loading Functions
+# ===============================
+@st.cache_data(ttl=3600)
+def load_summary_stats():
+    """Load summary statistics for landing page"""
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        
+        # Get total crime count
+        crime_response = supabase.table(SUPABASE_TABLE).select("fecha_hecho, alcaldia_hecho", count="exact").execute()
+        total_crimes = crime_response.count if hasattr(crime_response, 'count') else len(crime_response.data)
+        
+        # Get most recent date
+        recent_response = supabase.table(SUPABASE_TABLE).select("fecha_hecho").order("fecha_hecho", desc=True).limit(1).execute()
+        most_recent_date = recent_response.data[0]['fecha_hecho'] if recent_response.data else "N/A"
+        
+        # Get unique alcaldías count
+        alcaldias_response = supabase.table(SUPABASE_TABLE).select("alcaldia_hecho").execute()
+        df_temp = pd.DataFrame(alcaldias_response.data)
+        unique_alcaldias = df_temp['alcaldia_hecho'].nunique() if not df_temp.empty else 0
+        
+        # Get total cuadrantes
+        cuadrantes_response = supabase.table(SUPABASE_TABLE_CUADRANTS).select("*", count="exact").execute()
+        total_cuadrantes = cuadrantes_response.count if hasattr(cuadrantes_response, 'count') else len(cuadrantes_response.data)
+        
+        return {
+            'total_crimes': total_crimes,
+            'most_recent_date': most_recent_date,
+            'unique_alcaldias': unique_alcaldias,
+            'total_cuadrantes': total_cuadrantes
+        }
+    except Exception as e:
+        st.error(f"Error loading summary stats: {e}")
+        return {
+            'total_crimes': 0,
+            'most_recent_date': "N/A",
+            'unique_alcaldias': 0,
+            'total_cuadrantes': 0
+        }
+
+# ===============================
+# Landing Page
+# ===============================
+def show_landing_page():
+    """Display the enhanced landing/home page with role-based navigation"""
+    
+    # Custom CSS for landing page
+    st.markdown("""
+        <style>
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, #0066CC 0%, #004C99 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
+        }
+        
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            margin-bottom: 0;
+        }
+        
+        /* KPI Cards */
+        .kpi-card {
+            background: linear-gradient(135deg, #F8F9FA 0%, #ffffff 100%);
+            border-left: 4px solid #0066CC;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.08);
+            text-align: center;
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0066CC;
+            margin: 0.5rem 0;
+        }
+        
+        .kpi-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Navigation Cards */
+        .nav-card {
+            background: white;
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            height: 100%;
+            min-height: 200px;
+        }
+        
+        .nav-card:hover {
+            border-color: #0066CC;
+            box-shadow: 0 8px 24px rgba(0, 102, 204, 0.15);
+            transform: translateY(-4px);
+        }
+        
+        .nav-card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .nav-card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #0066CC;
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-card-description {
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        /* Footer */
+        .landing-footer {
+            text-align: center;
+            color: #888;
+            font-size: 0.85rem;
+            padding: 2rem 0 1rem 0;
+            border-top: 1px solid #E0E0E0;
+            margin-top: 3rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Hero Section
+    st.markdown("""
+        <div class="hero-section">
+            <h1 class="hero-title">📊 Panel de Análisis de Delitos CDMX</h1>
+            <p class="hero-subtitle">Plataforma integral para el análisis de patrones delictivos relacionados con vehículos en la Ciudad de México</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Load summary statistics
+    stats = load_summary_stats()
+    
+    # Format date
+    from datetime import datetime
+    if stats['most_recent_date'] != "N/A":
+        try:
+            date_obj = datetime.strptime(stats['most_recent_date'][:10], '%Y-%m-%d')
+            formatted_date = date_obj.strftime('%d/%m/%Y')
+        except:
+            formatted_date = stats['most_recent_date']
+    else:
+        formatted_date = "N/A"
+    
+    # KPI Stats Section
+    st.markdown("### 📈 Estadísticas Generales")
+    
+    kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+    
+    with kpi_col1:
+        st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Total de Delitos</div>
+                <div class="kpi-value">{stats['total_crimes']:,}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with kpi_col2:
+        st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Última Actualización</div>
+                <div class="kpi-value" style="font-size: 1.5rem;">{formatted_date}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with kpi_col3:
+        st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Alcaldías</div>
+                <div class="kpi-value">{stats['unique_alcaldias']}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with kpi_col4:
+        st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Cuadrantes</div>
+                <div class="kpi-value">{stats['total_cuadrantes']}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Navigation Cards Section
+    st.markdown("### 🧭 Explorar el Dashboard")
+    st.markdown("Selecciona una sección para comenzar tu análisis:")
+    
+    # Get allowed pages for current user
+    allowed_pages = get_allowed_pages(st.session_state.rol)
+    
+    # Row 1
+    nav_col1, nav_col2 = st.columns(2)
+    
+    with nav_col1:
+        if "🗺️ Mapa Interactivo" in allowed_pages:
+            st.markdown("""
+                <div class="nav-card">
+                    <div class="nav-card-icon">🗺️</div>
+                    <div class="nav-card-title">Mapa Interactivo</div>
+                    <div class="nav-card-description">
+                        Explora incidentes delictivos geográficamente con filtrado interactivo y capacidad de exploración por Alcaldía y Cuadrante.
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("Ir al Mapa Interactivo", key="btn_map", use_container_width=True):
+                st.session_state.current_page = "🗺️ Mapa Interactivo"
+                st.rerun()
+    
+    with nav_col2:
+        if "📈 Panorama de la Ciudad" in allowed_pages:
+            st.markdown("""
+                <div class="nav-card">
+                    <div class="nav-card-icon">📈</div>
+                    <div class="nav-card-title">Panorama de la Ciudad</div>
+                    <div class="nav-card-description">
+                        Visualiza tendencias, estadísticas e indicadores clave de rendimiento en toda la Ciudad de México.
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("Ver Panorama de la Ciudad", key="btn_overview", use_container_width=True):
+                st.session_state.current_page = "📈 Panorama de la Ciudad"
+                st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Row 2
+    nav_col3, nav_col4 = st.columns(2)
+    
+    with nav_col3:
+        if "🏛️ Panel de Alcaldías" in allowed_pages:
+            st.markdown("""
+                <div class="nav-card">
+                    <div class="nav-card-icon">🏛️</div>
+                    <div class="nav-card-title">Panel de Alcaldías</div>
+                    <div class="nav-card-description">
+                        Profundiza en análisis detallados a nivel de Alcaldía con desgloses y comparaciones detalladas.
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("Explorar Alcaldías", key="btn_alcaldias", use_container_width=True):
+                st.session_state.current_page = "🏛️ Panel de Alcaldías"
+                st.rerun()
+    
+    with nav_col4:
+        if "🔍 Verificador de Datos" in allowed_pages:
+            st.markdown("""
+                <div class="nav-card">
+                    <div class="nav-card-icon">🔍</div>
+                    <div class="nav-card-title">Verificador de Datos</div>
+                    <div class="nav-card-description">
+                        Inspecciona y verifica conjuntos de datos, calidad de datos y estado del sistema (herramienta administrativa).
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("Acceder al Verificador", key="btn_checker", use_container_width=True):
+                st.session_state.current_page = "🔍 Verificador de Datos"
+                st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Row 3 - Predicciones
+    nav_col5, nav_col6 = st.columns(2)
+    
+    with nav_col5:
+        if "Predicciones" in allowed_pages:
+            st.markdown("""
+                <div class="nav-card">
+                    <div class="nav-card-icon">🔮</div>
+                    <div class="nav-card-title">Predicciones</div>
+                    <div class="nav-card-description">
+                        Visualiza los resultados del modelo predictivo de delitos y análisis de patrones futuros.
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("Ver Predicciones", key="btn_predictions", use_container_width=True):
+                st.session_state.current_page = "Predicciones"
+                st.rerun()
+    
+    # Footer
+    st.markdown("""
+        <div class="landing-footer">
+            <p><strong>Panel de Análisis de Delitos CDMX</strong> v1.0</p>
+            <p>Datos proporcionados por la Fiscalía General de Justicia de la Ciudad de México</p>
+            <p style="margin-top: 1rem; font-size: 0.75rem; color: #AAA;">
+                Los datos mostrados son de carácter informativo. Para consultas oficiales, favor de dirigirse a las autoridades competentes.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# ===============================
+# Sidebar Navigation
+# ===============================
+st.sidebar.title("🔍 Navegación")
+
+# User info and logout button
+st.sidebar.markdown(f"**👤 Usuario:** {st.session_state.rol}")
+st.sidebar.markdown(f"**📧:** {st.session_state.user_email}")
+
+if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
+    logout_user()
+
+st.sidebar.markdown("---")
+
+# Get allowed pages for current role
+allowed_pages = get_allowed_pages(st.session_state.rol)
+
+# Update sidebar selection based on session state
+page = st.sidebar.radio(
+    "Selecciona una página:",
+    allowed_pages,
+    index=allowed_pages.index(st.session_state.current_page) if st.session_state.current_page in allowed_pages else 0
+)
+
+# Update session state if sidebar selection changes
+if page != st.session_state.current_page:
+    st.session_state.current_page = page
+    st.rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style='text-align: center; color: #888; font-size: 12px; padding: 10px;'>
+    <p>Panel de Análisis de Delitos CDMX v1.0</p>
+    <p>Datos de la Fiscalía General de Justicia</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ===============================
+# Page Routing with Access Control
+# ===============================
+current_page = st.session_state.current_page
+
+# Check if user has access to current page
+if current_page not in allowed_pages:
+    st.error("⚠️ No tienes acceso a esta página.")
+    st.info("Por favor selecciona una página del menú de navegación.")
+    st.stop()
+
+# Route to appropriate page
+if current_page == "🏠 Inicio":
+    show_landing_page()
+
+elif current_page == "🗺️ Mapa Interactivo":
+    interactive_map.show()
+
+elif current_page == "📈 Panorama de la Ciudad":
+    city_overview.show()
+
+elif current_page == "🏛️ Panel de Alcaldías":
+    alcaldias_dashboard.show()
+
+elif current_page == "🔍 Verificador de Datos":
+    data_checker.show()
+
+elif current_page == "Predicciones":
+    predictions_page.show()
