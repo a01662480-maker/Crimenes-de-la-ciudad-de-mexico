@@ -410,6 +410,9 @@ def show():
     st.sidebar.markdown("### 🎛️ Filtros")
     
     # Year range slider in sidebar
+    def sync_from_sidebar():
+        st.session_state.year_range = st.session_state.sidebar_year_slider
+    
     sidebar_year_range = st.sidebar.slider(
         "📅 Rango de Años",
         min_value=min_year,
@@ -418,9 +421,9 @@ def show():
         step=1,
         format="%d",
         help=f"Select a continuous range from {min_year} to {max_year}",
-        key='sidebar_year_slider'
+        key='sidebar_year_slider',
+        on_change=sync_from_sidebar
     )
-    st.session_state.year_range = sidebar_year_range
     
     start_year_sidebar, end_year_sidebar = sidebar_year_range
     
@@ -465,6 +468,9 @@ def show():
     col1, col2, col3 = st.columns([3, 2, 1])
     
     with col1:
+        def sync_from_top():
+            st.session_state.year_range = st.session_state.top_year_slider
+        
         top_year_range = st.slider(
             "📅 Selecciona Rango de Años",
             min_value=min_year,
@@ -473,9 +479,9 @@ def show():
             step=1,
             format="%d",
             help=f"Select a continuous range from {min_year} to {max_year}",
-            key='top_year_slider'
+            key='top_year_slider',
+            on_change=sync_from_top
         )
-        st.session_state.year_range = top_year_range
     
     with col2:
         top_violence = st.selectbox(
