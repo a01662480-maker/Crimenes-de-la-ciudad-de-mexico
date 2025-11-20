@@ -402,14 +402,14 @@ def show():
         st.session_state.breakdown_option = "Delitos Totales"
     
     
-    # ===============================
+# ===============================
     # SIDEBAR FILTERS (Multi-page compatible)
     # ===============================
     # Add spacing after page navigation
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🎛️ Filtros")
     
-    # Year range slider in sidebar - update session state directly
+    # Year range slider in sidebar
     sidebar_year_range = st.sidebar.slider(
         "📅 Rango de Años",
         min_value=min_year,
@@ -420,9 +420,12 @@ def show():
         help=f"Select a continuous range from {min_year} to {max_year}",
         key='sidebar_year_slider'
     )
-    # Update session state without rerun
-    st.session_state.year_range = sidebar_year_range
+    # Update session state and rerun if changed
+    if sidebar_year_range != st.session_state.year_range:
+        st.session_state.year_range = sidebar_year_range
+        st.rerun()
     
+    # Extract start and end years from the range
     start_year_sidebar, end_year_sidebar = sidebar_year_range
     
     # Display selected range
@@ -432,7 +435,6 @@ def show():
         st.sidebar.caption(f"📊 Analyzing: **{start_year_sidebar} to {end_year_sidebar}** ({end_year_sidebar - start_year_sidebar + 1} years)")
     
     st.sidebar.markdown("---")
-    
     # Violence filter in sidebar - update session state directly
     violence_options = ["Todos los Delitos", "Solo Violentos", "Solo No Violentos"]
     sidebar_violence = st.sidebar.selectbox(
@@ -441,10 +443,10 @@ def show():
         index=violence_options.index(st.session_state.violence_filter),
         key='sidebar_violence_select'
     )
-    # Update session state without rerun
-    st.session_state.violence_filter = sidebar_violence
-    
-    st.sidebar.markdown("---")
+    # Add back the rerun check
+    if sidebar_violence != st.session_state.violence_filter:
+        st.session_state.violence_filter = sidebar_violence
+        st.rerun()
     
     # Refresh button in sidebar
     if st.sidebar.button("🔄 Actualizar Datos", use_container_width=True, key='sidebar_refresh'):
@@ -480,10 +482,10 @@ def show():
             help=f"Select a continuous range from {min_year} to {max_year}",
             key='top_year_slider'
         )
-        # Update session state without rerun
-        st.session_state.year_range = top_year_range
-        
-        start_year, end_year = st.session_state.year_range
+        # Add back the rerun check
+        if top_year_range != st.session_state.year_range:
+            st.session_state.year_range = top_year_range
+            st.rerun()
     
     with col2:
         top_violence = st.selectbox(
@@ -492,8 +494,10 @@ def show():
             index=violence_options.index(st.session_state.violence_filter),
             key='top_violence_select'
         )
-        # Update session state without rerun
-        st.session_state.violence_filter = top_violence
+        # Add back the rerun check
+        if top_violence != st.session_state.violence_filter:
+            st.session_state.violence_filter = top_violence
+            st.rerun()
     
     with col3:
         if st.button("🔄 Actualizar", use_container_width=True, key='top_refresh'):
