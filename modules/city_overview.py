@@ -420,12 +420,8 @@ def show():
         help=f"Select a continuous range from {min_year} to {max_year}",
         key='sidebar_year_slider'
     )
-    # Update session state and rerun if changed
-    if sidebar_year_range != st.session_state.year_range:
-        st.session_state.year_range = sidebar_year_range
-        st.rerun()
+    st.session_state.year_range = sidebar_year_range
     
-    # Extract start and end years from the range
     start_year_sidebar, end_year_sidebar = sidebar_year_range
     
     # Display selected range
@@ -443,10 +439,7 @@ def show():
         index=violence_options.index(st.session_state.violence_filter),
         key='sidebar_violence_select'
     )
-    # Add back the rerun check
-    if sidebar_violence != st.session_state.violence_filter:
-        st.session_state.violence_filter = sidebar_violence
-        st.rerun()
+    st.session_state.violence_filter = sidebar_violence
     
     # Refresh button in sidebar
     if st.sidebar.button("🔄 Actualizar Datos", use_container_width=True, key='sidebar_refresh'):
@@ -482,10 +475,7 @@ def show():
             help=f"Select a continuous range from {min_year} to {max_year}",
             key='top_year_slider'
         )
-        # Add back the rerun check
-        if top_year_range != st.session_state.year_range:
-            st.session_state.year_range = top_year_range
-            st.rerun()
+        st.session_state.year_range = top_year_range
     
     with col2:
         top_violence = st.selectbox(
@@ -494,10 +484,7 @@ def show():
             index=violence_options.index(st.session_state.violence_filter),
             key='top_violence_select'
         )
-        # Add back the rerun check
-        if top_violence != st.session_state.violence_filter:
-            st.session_state.violence_filter = top_violence
-            st.rerun()
+        st.session_state.violence_filter = top_violence
     
     with col3:
         if st.button("🔄 Actualizar", use_container_width=True, key='top_refresh'):
@@ -516,7 +503,6 @@ def show():
         filtered_df = filtered_df[filtered_df['violence_category'] == 'violent']
     elif violence_filter == "Solo No Violentos":
         filtered_df = filtered_df[filtered_df['violence_category'] == 'non_violent']
-    
     # ===============================
     # CALCULATE METRICS
     # ===============================
