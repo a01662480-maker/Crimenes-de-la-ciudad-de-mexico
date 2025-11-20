@@ -394,6 +394,13 @@ def show():
         st.session_state.year_range = (max_year - 1 if max_year > min_year else min_year, max_year)
     if 'violence_filter' not in st.session_state:
         st.session_state.violence_filter = "Todos los Delitos"
+    if 'measurement_type' not in st.session_state:
+        st.session_state.measurement_type = "Cantidad Total"
+    if 'composition_type' not in st.session_state:
+        st.session_state.composition_type = "Delitos Totales"
+    if 'breakdown_option' not in st.session_state:
+        st.session_state.breakdown_option = "Delitos Totales"
+    
     
     # ===============================
     # SIDEBAR FILTERS (Multi-page compatible)
@@ -613,8 +620,13 @@ def show():
         "Ver por:",
         options=["Delitos Totales", "Desglose por Violencia"],
         horizontal=True,
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        index=["Delitos Totales", "Desglose por Violencia"].index(st.session_state.breakdown_option),
+        key='breakdown_radio'
     )
+    if breakdown_option != st.session_state.breakdown_option:
+        st.session_state.breakdown_option = breakdown_option
+        st.rerun()
     
     if breakdown_option == "Delitos Totales":
         time_series = filtered_df.groupby(filtered_df['fecha_hecho'].dt.to_period('M')).size().reset_index()
@@ -866,16 +878,24 @@ def show():
                 "Medición:",
                 options=["Cantidad Total", "Per Cápita (por 100k)"],
                 horizontal=True,
+                index=["Cantidad Total", "Per Cápita (por 100k)"].index(st.session_state.measurement_type),
                 key='measurement_toggle'
             )
+            if measurement_type != st.session_state.measurement_type:
+                st.session_state.measurement_type = measurement_type
+                st.rerun()
         
         with toggle_col2:
             composition_type = st.radio(
                 "Composición:",
                 options=["Delitos Totales", "Desglose por Violencia"],
                 horizontal=True,
+                index=["Delitos Totales", "Desglose por Violencia"].index(st.session_state.composition_type),
                 key='composition_toggle'
             )
+            if composition_type != st.session_state.composition_type:
+                st.session_state.composition_type = composition_type
+                st.rerun()
         
         # Prepare data based on composition type
         if composition_type == "Delitos Totales":
