@@ -11,9 +11,9 @@ from components.mckinsey_styling import apply_mckinsey_styles
 # ===============================
 # Configuration
 # ===============================
-SUPABASE_URL = "https://xzeycsqwynjxnzgctydr.supabase.co"
-SUPABASE_KEY = "sb_publishable_wSTGdAAY_IIuYKNpr6N6GA_rGZy-y29"
-SUPABASE_TABLE = "FGJ"
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "FGJ")
 
 # McKinsey Color Palette
 MCKINSEY_COLORS = {
@@ -628,7 +628,7 @@ def show():
         st.session_state.breakdown_option = breakdown_option
         st.rerun()
     
-    if breakdown_option == "Delitos Totales":
+    if st.session_state.breakdown_option == "Delitos Totales":
         time_series = filtered_df.groupby(filtered_df['fecha_hecho'].dt.to_period('M')).size().reset_index()
         time_series.columns = ['month', 'crimes']
         time_series['month'] = time_series['month'].dt.to_timestamp()
@@ -898,12 +898,12 @@ def show():
                 st.rerun()
         
         # Prepare data based on composition type
-        if composition_type == "Delitos Totales":
+        if st.session_state.composition_type == "Delitos Totales":
             # Simple aggregation
             alcaldia_stats = filtered_df.groupby('alcaldia_normalized').size().reset_index(name='crimes')
             
             # Add population data if needed
-            if measurement_type == "Per Cápita (por 100k)" and population_data:
+            if st.session_state.measurement_type == "Per Cápita (por 100k)" and population_data:
                 alcaldia_stats['population'] = alcaldia_stats['alcaldia_normalized'].map(population_data)
                 alcaldia_stats['value'] = (alcaldia_stats['crimes'] / alcaldia_stats['population'] * 100000).round(1)
                 alcaldia_stats = alcaldia_stats.dropna(subset=['value'])
@@ -932,7 +932,7 @@ def show():
                     ),
                     hovertemplate='<b>%{y}</b><br>Value: %{x:,.1f}<extra></extra>',
                     text=alcaldia_stats['value'],
-                    texttemplate='%{text:,.0f}' if measurement_type == "Cantidad Total" else '%{text:,.1f}',
+                    texttemplate='%{text:,.0f}' if st.session_state.measurement_type == "Cantidad Total" else '%{text:,.1f}',
                     textposition='outside',
                     textfont=dict(size=9, family='Inter')
                 )
@@ -959,7 +959,7 @@ def show():
             alcaldia_pivot = alcaldia_pivot.reset_index()
             
             # Add population data if needed
-            if measurement_type == "Per Cápita (por 100k)" and population_data:
+            if st.session_state.measurement_type == "Per Cápita (por 100k)" and population_data:
                 alcaldia_pivot['population'] = alcaldia_pivot['alcaldia_normalized'].map(population_data)
                 alcaldia_pivot['violent_value'] = (alcaldia_pivot['violent'] / alcaldia_pivot['population'] * 100000).round(1)
                 alcaldia_pivot['non_violent_value'] = (alcaldia_pivot['non_violent'] / alcaldia_pivot['population'] * 100000).round(1)
@@ -987,7 +987,7 @@ def show():
                 marker=dict(color=MCKINSEY_COLORS['light_blue']),
                 hovertemplate='<b>%{y}</b><br>Non-Violent: %{x:,.1f}<extra></extra>',
                 text=alcaldia_pivot['non_violent_value'],
-                texttemplate='%{text:,.0f}' if measurement_type == "Cantidad Total" else '%{text:,.1f}',
+                texttemplate='%{text:,.0f}' if st.session_state.measurement_type == "Cantidad Total" else '%{text:,.1f}',
                 textposition='inside',
                 textfont=dict(size=8, family='Inter', color='white')
             ))
@@ -1001,7 +1001,7 @@ def show():
                 marker=dict(color=MCKINSEY_COLORS['dark_blue']),
                 hovertemplate='<b>%{y}</b><br>Violent: %{x:,.1f}<extra></extra>',
                 text=alcaldia_pivot['violent_value'],
-                texttemplate='%{text:,.0f}' if measurement_type == "Cantidad Total" else '%{text:,.1f}',
+                texttemplate='%{text:,.0f}' if st.session_state.measurement_type == "Cantidad Total" else '%{text:,.1f}',
                 textposition='inside',
                 textfont=dict(size=8, family='Inter', color='white')
             ))
@@ -1009,7 +1009,7 @@ def show():
             fig.update_layout(barmode='stack')
         
         # Common layout settings
-        x_title = "Number of Crimes" if measurement_type == "Cantidad Total" else "Crime Rate (per 100,000 residents)"
+        x_title = "Number of Crimes" if st.session_state.measurement_type == "Cantidad Total" else "Crime Rate (per 100,000 residents)"
         
         fig.update_layout(
             plot_bgcolor='white',
@@ -1028,7 +1028,7 @@ def show():
             ),
             margin=dict(l=100, r=40, t=10, b=50),
             height=550,
-            showlegend=(composition_type == "Desglose por Violencia"),
+            showlegend=(st.session_state.composition_type == "Desglose por Violencia"),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
@@ -1043,7 +1043,7 @@ def show():
     
     with stats_col:
         # Calculate stats for display
-        if composition_type == "Delitos Totales":
+        if st.session_state.composition_type == "Delitos Totales":
             display_stats = alcaldia_stats.copy()
         else:
             display_stats = alcaldia_pivot[['alcaldia_normalized', 'total', 'total_value']].rename(
