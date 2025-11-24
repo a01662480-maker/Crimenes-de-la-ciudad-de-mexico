@@ -1,6 +1,6 @@
 """
 CDMX Crime Analytics Dashboard
-Main application entry point with authentication
+Main application entry point with authentication and "Remember Me" functionality
 """
 
 import streamlit as st
@@ -8,6 +8,8 @@ from supabase import create_client
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from streamlit_cookies_manager import EncryptedCookieManager
+import json
 
 # ===============================
 # Load Environment Variables
@@ -22,6 +24,9 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "FGJ")
 SUPABASE_TABLE_CUADRANTS = os.getenv("SUPABASE_TABLE_CUADRANTS", "cuadrantes")
 
+# Cookie password for encryption (MUST be set in .env for security)
+COOKIE_PASSWORD = os.getenv("COOKIE_PASSWORD", "my-super-secret-password-change-this-in-production")
+
 # ===============================
 # App Configuration (MUST BE FIRST)
 # ===============================
@@ -32,6 +37,19 @@ st.set_page_config(
 )
 
 # ===============================
+# Cookie Manager Initialization
+# ===============================
+# Initialize cookie manager with 7-day expiry
+cookies = EncryptedCookieManager(
+    prefix="cdmx_crime_app_",
+    password=COOKIE_PASSWORD
+)
+
+# Wait for cookies to be ready
+if not cookies.ready():
+    st.stop()
+
+# ===============================
 # Authentication Functions
 # ===============================
 def login_user(email, password):
@@ -40,23 +58,100 @@ def login_user(email, password):
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
         user = auth_response.user
+        session = auth_response.session
         
-        if not user:
-            return None, None
+        if not user or not session:
+            return None, None, None
         
         # Fetch user role from profiles table
         user_data = supabase.table("profiles").select("rol").eq("id", user.id).single().execute()
         rol = user_data.data["rol"] if user_data.data else None
         
-        return user, rol
+        return user, rol, session
     except Exception as e:
         st.error(f"❌ Error al iniciar sesión: {e}")
-        return None, None
+        return None, None, None
+
+
+def save_session_to_cookies(session, email, rol, remember_me=False):
+    """Save session tokens to encrypted cookies"""
+    if remember_me:
+        # Store refresh token for 7 days
+        cookies["refresh_token"] = session.refresh_token
+        cookies["user_email"] = email
+        cookies["user_rol"] = rol
+        cookies["remember_me"] = "true"
+        cookies.save()
+
+
+def auto_login_from_cookies():
+    """Attempt to auto-login using stored refresh token"""
+    try:
+        # Check if remember_me cookie exists
+        if cookies.get("remember_me") != "true":
+            return False
+        
+        refresh_token = cookies.get("refresh_token")
+        user_email = cookies.get("user_email")
+        user_rol = cookies.get("user_rol")
+        
+        if not refresh_token:
+            return False
+        
+        # Try to refresh session with Supabase
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        
+        # Set the refresh token and get new session
+        auth_response = supabase.auth.set_session(refresh_token, refresh_token)
+        
+        if auth_response and auth_response.user:
+            # Successfully refreshed - update session state
+            st.session_state.logged_in = True
+            st.session_state.rol = user_rol
+            st.session_state.user_email = user_email
+            
+            # Update cookies with new refresh token if available
+            if auth_response.session and auth_response.session.refresh_token:
+                cookies["refresh_token"] = auth_response.session.refresh_token
+                cookies.save()
+            
+            return True
+        else:
+            # Token expired or invalid - clear cookies
+            clear_cookies()
+            return False
+            
+    except Exception as e:
+        # If auto-login fails, clear cookies and return False
+        clear_cookies()
+        return False
+
+
+def clear_cookies():
+    """Clear all authentication cookies"""
+    cookies["refresh_token"] = ""
+    cookies["user_email"] = ""
+    cookies["user_rol"] = ""
+    cookies["remember_me"] = ""
+    cookies.save()
+
 
 def logout_user():
-    """Clear session state and log out user"""
+    """Clear session state, cookies, and log out user"""
+    try:
+        # Revoke Supabase session if possible
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        supabase.auth.sign_out()
+    except:
+        pass
+    
+    # Clear cookies
+    clear_cookies()
+    
+    # Clear session state
     st.session_state.clear()
     st.rerun()
+
 
 def get_allowed_pages(rol):
     """Return list of pages accessible to each role"""
@@ -97,6 +192,15 @@ if 'logged_in' not in st.session_state:
 
 if 'current_page' not in st.session_state:
     st.session_state.current_page = "🏠 Inicio"
+
+# ===============================
+# AUTO-LOGIN CHECK
+# ===============================
+# Try to auto-login before showing login page
+if not st.session_state.logged_in:
+    auto_login_successful = auto_login_from_cookies()
+    if auto_login_successful:
+        st.rerun()
 
 # ===============================
 # LOGIN PAGE
@@ -141,14 +245,23 @@ if not st.session_state.logged_in:
             email = st.text_input("📧 Correo electrónico", key="login_email")
             password = st.text_input("🔒 Contraseña", type="password", key="login_password")
             
+            # Remember Me checkbox
+            remember_me = st.checkbox("🔐 Recordarme por 7 días", value=False)
+            
             if st.button("Iniciar sesión", use_container_width=True, type="primary"):
                 if email and password:
                     with st.spinner("Verificando credenciales..."):
-                        user, rol = login_user(email, password)
-                        if user and rol:
+                        user, rol, session = login_user(email, password)
+                        if user and rol and session:
+                            # Set session state
                             st.session_state.logged_in = True
                             st.session_state.rol = rol
                             st.session_state.user_email = email
+                            
+                            # Save to cookies if remember_me is checked
+                            if remember_me:
+                                save_session_to_cookies(session, email, rol, remember_me=True)
+                            
                             st.success("✅ Inicio de sesión exitoso")
                             st.rerun()
                         else:
