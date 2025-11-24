@@ -414,7 +414,7 @@ def show():
     st.sidebar.header("🗺️ Resultados del mapa")
     map_metric = st.sidebar.radio(
         "Mostrar alcaldías por:",
-        options=["Total Crímenes", "Crímenes per ápita"],
+        options=["Total Crímenes", "Crímenes per cápita"],
         index=0,
         help="Elige cómo colorear el mapa: por el total de delitos o por la tasa de delitos por cada 1,000 habitantes."
     )
