@@ -755,6 +755,9 @@ def show():
     st.title("🔮 Predicciones de Delitos")
     st.markdown('<p class="subtitle">Análisis predictivo basado en Machine Learning para los próximos 5 días</p>', unsafe_allow_html=True)
     
+    # DEBUG: Version marker (remove after verifying deployment)
+    st.caption("🔄 Versión: 2024-11-24 con Chatbot integrado")
+    
     # ===============================
     # LOAD DATA
     # ===============================
@@ -1054,6 +1057,40 @@ def show():
                 
                 # Rerun to show updated history
                 st.rerun()
+    
+    # ===============================
+    # MODEL PERFORMANCE SECTION
+    # ===============================
+    
+    st.markdown('<h2 class="section-header">📊 Desempeño del Modelo de Machine Learning</h2>', unsafe_allow_html=True)
+    
+    # Try to load and display the model performance image
+    try:
+        # Get path relative to this file (predictions.py is in modules/)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.join(current_dir, '..', 'MLP_performance.jpg')
+        
+        # Check if file exists
+        if os.path.exists(image_path):
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                st.image(image_path, caption="Métricas de Desempeño del Modelo MLP + XGBoost Ensemble", use_container_width=True)
+                
+                # Add explanation
+                st.markdown("""
+                <div style='background: {0}; padding: 1rem; border-radius: 8px; margin-top: 1rem;'>
+                    <p style='margin: 0; color: {1}; font-size: 0.9rem;'>
+                        <strong>Sobre el Modelo:</strong> Las predicciones se generan usando un ensemble de MLP (Multi-Layer Perceptron) 
+                        y XGBoost, entrenado con datos históricos. Las métricas mostradas indican la precisión del modelo 
+                        en pruebas con datos no vistos anteriormente.
+                    </p>
+                </div>
+                """.format(MCKINSEY_COLORS['card_bg'], MCKINSEY_COLORS['text']), unsafe_allow_html=True)
+        else:
+            st.info("📊 Imagen de desempeño del modelo no disponible. Contacte al administrador.")
+    
+    except Exception as e:
+        st.warning(f"⚠ No se pudo cargar la imagen de desempeño del modelo.")
     
     # ===============================
     # FOOTER INFO
