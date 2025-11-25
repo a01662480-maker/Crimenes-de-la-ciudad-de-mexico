@@ -1240,28 +1240,7 @@ def show():
         else:
             st.info("No hay datos disponibles para este período")
     
-    # ===============================
-    # DEMOGRAPHIC INFO ROW
-    # ===============================
-    st.subheader("📋 Información Demográfica")
-    
-    info_col1, info_col2, info_col3 = st.columns(3)
-    
-    with info_col1:
-        pop_value = population_data.get(selected_alcaldia, None) if population_data else None
-        pop_display = format_number(pop_value) if pop_value else "Pendiente"
-        st.caption("👥 Población")
-        st.markdown(f"**{pop_display}**")
-    
-    with info_col2:
-        cuad_value = cuadrantes_count.get(selected_alcaldia, None) if cuadrantes_count else None
-        cuad_display = format_number(cuad_value) if cuad_value else "Pendiente"
-        st.caption("📍 Cuadrantes")
-        st.markdown(f"**{cuad_display}**")
-    
-    with info_col3:
-        st.caption("📏 Área (km²)")
-        st.markdown("**Pendiente**")
+
 
 if __name__ == "__main__":
     show()
