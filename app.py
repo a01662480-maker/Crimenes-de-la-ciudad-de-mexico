@@ -163,14 +163,15 @@ def get_allowed_pages(rol):
             "🏛️ Panel de Alcaldías",
             "🔍 Verificador de Datos",
             "📊 EDA",
-            "Predicciones"
+            "🔮 Predicciones",
+            "🏗️ Arquitectura"
         ],
         "FGJ": [
             "🏠 Inicio",
             "🗺️ Mapa Interactivo",
             "📈 Panorama de la Ciudad",
             "🏛️ Panel de Alcaldías",
-            "Predicciones"
+            "🔮 Predicciones"
         ],
         "THALES": [
             "🏠 Inicio",
@@ -179,7 +180,8 @@ def get_allowed_pages(rol):
             "🏛️ Panel de Alcaldías",
             "🔍 Verificador de Datos",
             "📊 EDA",
-            "Predicciones"
+            "🔮 Predicciones",
+            "🏗️ Arquitectura"
         ]
     }
     return role_pages.get(rol, ["🏠 Inicio"])
@@ -212,29 +214,14 @@ if not st.session_state.logged_in:
     st.markdown("""
         <style>
         .login-container {
-            max-width: 450px;
+            max-width: 400px;
             margin: 0 auto;
             padding: 2rem;
         }
         .login-header {
             text-align: center;
-            margin-bottom: 2rem;
-        }
-        .login-image {
-            border-radius: 15px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            margin-bottom: 1.5rem;
-        }
-        .login-title {
             color: #0066CC;
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin: 1rem 0 0.5rem 0;
-        }
-        .login-subtitle {
-            color: #666;
-            font-size: 1rem;
-            margin-bottom: 0;
+            margin-bottom: 2rem;
         }
         .login-box {
             background: white;
@@ -245,25 +232,21 @@ if not st.session_state.logged_in:
         </style>
     """, unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        st.markdown('<div class="login-header">', unsafe_allow_html=True)
-        
-        # Display CDMX image
-        try:
+        # Display CDMX logo
+        if os.path.exists("CDMX.png"):
             st.image("CDMX.png", use_container_width=True)
-        except:
-            # Fallback to emoji if image not found
-            st.markdown("<h1>📊</h1>", unsafe_allow_html=True)
         
         st.markdown("""
-            <div class="login-title">Panel de Análisis de Delitos CDMX</div>
-            <div class="login-subtitle">Iniciar Sesión</div>
+            <div class="login-header">
+                <h2>Panel de Análisis de Delitos CDMX</h2>
+                <p>Iniciar Sesión</p>
+            </div>
         """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
         
         with st.container():
             email = st.text_input("📧 Correo electrónico", key="login_email")
@@ -300,7 +283,7 @@ if not st.session_state.logged_in:
 # ===============================
 
 # Import all pages
-from modules import Predictions, data_checker, alcaldias_dashboard, interactive_map, city_overview, predictions_page, EDA
+from modules import EDA, data_checker, alcaldias_dashboard, interactive_map, city_overview, predictions_page, arquitectura
 
 # ===============================
 # Data Loading Functions
@@ -399,41 +382,33 @@ def show_landing_page():
             letter-spacing: 0.5px;
         }
         
-        /* Navigation Cards */
-        .nav-card {
-            background: white;
-            border: 2px solid #E0E0E0;
-            border-radius: 12px;
-            padding: 2rem 1.5rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            height: 100%;
-            min-height: 200px;
+        /* Navigation Card Buttons */
+        .stButton > button {
+            background: white !important;
+            border: 2px solid #E0E0E0 !important;
+            border-radius: 12px !important;
+            padding: 2rem 1.5rem !important;
+            text-align: center !important;
+            transition: all 0.3s ease !important;
+            height: 220px !important;
+            width: 100% !important;
+            color: #666 !important;
+            font-size: 0.95rem !important;
+            line-height: 1.6 !important;
+            box-shadow: none !important;
+            white-space: pre-line !important;
         }
         
-        .nav-card:hover {
-            border-color: #0066CC;
-            box-shadow: 0 8px 24px rgba(0, 102, 204, 0.15);
-            transform: translateY(-4px);
+        .stButton > button:hover {
+            border-color: #0066CC !important;
+            box-shadow: 0 8px 24px rgba(0, 102, 204, 0.15) !important;
+            transform: translateY(-4px) !important;
+            background: white !important;
         }
         
-        .nav-card-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        
-        .nav-card-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #0066CC;
-            margin-bottom: 0.5rem;
-        }
-        
-        .nav-card-description {
-            font-size: 0.95rem;
-            color: #666;
-            line-height: 1.5;
+        .stButton > button:focus:not(:active) {
+            border-color: #E0E0E0 !important;
+            box-shadow: none !important;
         }
         
         /* Footer */
@@ -513,111 +488,71 @@ def show_landing_page():
     st.markdown("### 🧭 Explorar el Dashboard")
     st.markdown("Selecciona una sección para comenzar tu análisis:")
     
-    # Get allowed pages for current user
+    # Get allowed pages for current user (excluding Inicio)
     allowed_pages = get_allowed_pages(st.session_state.rol)
+    display_pages = [p for p in allowed_pages if p != "🏠 Inicio"]
     
-    # Row 1
-    nav_col1, nav_col2 = st.columns(2)
+    # Define page metadata (icon, title, description)
+    page_metadata = {
+        "🗺️ Mapa Interactivo": {
+            "icon": "🗺️",
+            "title": "Mapa Interactivo",
+            "description": "Explora incidentes delictivos geográficamente con filtrado interactivo y capacidad de exploración por Alcaldía y Cuadrante."
+        },
+        "📈 Panorama de la Ciudad": {
+            "icon": "📈",
+            "title": "Panorama de la Ciudad",
+            "description": "Visualiza tendencias, estadísticas e indicadores clave de rendimiento en toda la Ciudad de México."
+        },
+        "🏛️ Panel de Alcaldías": {
+            "icon": "🏛️",
+            "title": "Panel de Alcaldías",
+            "description": "Profundiza en análisis detallados a nivel de Alcaldía con desgloses y comparaciones detalladas."
+        },
+        "🔍 Verificador de Datos": {
+            "icon": "🔍",
+            "title": "Verificador de Datos",
+            "description": "Inspecciona y verifica conjuntos de datos, calidad de datos y estado del sistema (herramienta administrativa)."
+        },
+        "📊 EDA": {
+            "icon": "📊",
+            "title": "Análisis Exploratorio (EDA)",
+            "description": "Radiografía visual del robo de vehículos: patrones, tendencias y zonas críticas con gráficos interactivos."
+        },
+        "🔮 Predicciones": {
+            "icon": "🔮",
+            "title": "Predicciones",
+            "description": "Visualiza los resultados del modelo predictivo de delitos y análisis de patrones futuros basados en Machine Learning."
+        },
+        "🏗️ Arquitectura": {
+            "icon": "🏗️",
+            "title": "Arquitectura Técnica",
+            "description": "Documentación técnica completa del sistema: base de datos, modelos ML, pipelines y agentes de IA."
+        }
+    }
     
-    with nav_col1:
-        if "🗺️ Mapa Interactivo" in allowed_pages:
-            st.markdown("""
-                <div class="nav-card">
-                    <div class="nav-card-icon">🗺️</div>
-                    <div class="nav-card-title">Mapa Interactivo</div>
-                    <div class="nav-card-description">
-                        Explora incidentes delictivos geográficamente con filtrado interactivo y capacidad de exploración por Alcaldía y Cuadrante.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("Ir al Mapa Interactivo", key="btn_map", use_container_width=True):
-                st.session_state.current_page = "🗺️ Mapa Interactivo"
-                st.rerun()
-    
-    with nav_col2:
-        if "📈 Panorama de la Ciudad" in allowed_pages:
-            st.markdown("""
-                <div class="nav-card">
-                    <div class="nav-card-icon">📈</div>
-                    <div class="nav-card-title">Panorama de la Ciudad</div>
-                    <div class="nav-card-description">
-                        Visualiza tendencias, estadísticas e indicadores clave de rendimiento en toda la Ciudad de México.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("Ver Panorama de la Ciudad", key="btn_overview", use_container_width=True):
-                st.session_state.current_page = "📈 Panorama de la Ciudad"
-                st.rerun()
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Row 2
-    nav_col3, nav_col4 = st.columns(2)
-    
-    with nav_col3:
-        if "🏛️ Panel de Alcaldías" in allowed_pages:
-            st.markdown("""
-                <div class="nav-card">
-                    <div class="nav-card-icon">🏛️</div>
-                    <div class="nav-card-title">Panel de Alcaldías</div>
-                    <div class="nav-card-description">
-                        Profundiza en análisis detallados a nivel de Alcaldía con desgloses y comparaciones detalladas.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("Explorar Alcaldías", key="btn_alcaldias", use_container_width=True):
-                st.session_state.current_page = "🏛️ Panel de Alcaldías"
-                st.rerun()
-    
-    with nav_col4:
-        if "🔍 Verificador de Datos" in allowed_pages:
-            st.markdown("""
-                <div class="nav-card">
-                    <div class="nav-card-icon">🔍</div>
-                    <div class="nav-card-title">Verificador de Datos</div>
-                    <div class="nav-card-description">
-                        Inspecciona y verifica conjuntos de datos, calidad de datos y estado del sistema (herramienta administrativa).
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("Acceder al Verificador", key="btn_checker", use_container_width=True):
-                st.session_state.current_page = "🔍 Verificador de Datos"
-                st.rerun()
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Row 3 - EDA & Predicciones
-    nav_col5, nav_col6 = st.columns(2)
-    
-    with nav_col5:
-        if "📊 EDA" in allowed_pages:
-            st.markdown("""
-                <div class="nav-card">
-                    <div class="nav-card-icon">📊</div>
-                    <div class="nav-card-title">Análisis Exploratorio (EDA)</div>
-                    <div class="nav-card-description">
-                        Radiografía visual del robo de vehículos: patrones, tendencias y zonas críticas con gráficos interactivos.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("Ver EDA", key="btn_eda", use_container_width=True):
-                st.session_state.current_page = "📊 EDA"
-                st.rerun()
-    
-    with nav_col6:
-        if "Predicciones" in allowed_pages:
-            st.markdown("""
-                <div class="nav-card">
-                    <div class="nav-card-icon">🔮</div>
-                    <div class="nav-card-title">Predicciones</div>
-                    <div class="nav-card-description">
-                        Visualiza los resultados del modelo predictivo de delitos y análisis de patrones futuros.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("Ver Predicciones", key="btn_predictions", use_container_width=True):
-                st.session_state.current_page = "Predicciones"
-                st.rerun()
+    # Create cards dynamically in rows of 2
+    for i in range(0, len(display_pages), 2):
+        cols = st.columns(2)
+        
+        for j, col in enumerate(cols):
+            if i + j < len(display_pages):
+                page = display_pages[i + j]
+                metadata = page_metadata.get(page, {
+                    "icon": "📄",
+                    "title": page.replace("🏠 ", "").replace("🗺️ ", "").replace("📈 ", "").replace("🏛️ ", "").replace("🔍 ", "").replace("🔮 ", "").replace("🏗️ ", "").replace("📊 ", ""),
+                    "description": "Página del dashboard"
+                })
+                
+                with col:
+                    # Create button with plain text (no HTML)
+                    button_label = f"{metadata['icon']}\n\n{metadata['title']}\n\n{metadata['description']}"
+                    
+                    if st.button(button_label, key=f"nav_btn_{i}_{j}", use_container_width=True):
+                        st.session_state.current_page = page
+                        st.rerun()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
     
     # Footer
     st.markdown("""
@@ -697,5 +632,8 @@ elif current_page == "🔍 Verificador de Datos":
 elif current_page == "📊 EDA":
     EDA.show()
 
-elif current_page == "Predicciones":
+elif current_page == "🔮 Predicciones":
     predictions_page.show()
+
+elif current_page == "🏗️ Arquitectura":
+    arquitectura.show()
