@@ -162,6 +162,7 @@ def get_allowed_pages(rol):
             "📈 Panorama de la Ciudad",
             "🏛️ Panel de Alcaldías",
             "🔍 Verificador de Datos",
+            "📊 EDA",
             "Predicciones"
         ],
         "FGJ": [
@@ -177,6 +178,7 @@ def get_allowed_pages(rol):
             "📈 Panorama de la Ciudad",
             "🏛️ Panel de Alcaldías",
             "🔍 Verificador de Datos",
+            "📊 EDA",
             "Predicciones"
         ]
     }
@@ -276,7 +278,7 @@ if not st.session_state.logged_in:
 # ===============================
 
 # Import all pages
-from modules import Predictions, data_checker, alcaldias_dashboard, interactive_map, city_overview, predictions_page
+from modules import Predictions, data_checker, alcaldias_dashboard, interactive_map, city_overview, predictions_page, EDA
 
 # ===============================
 # Data Loading Functions
@@ -562,10 +564,25 @@ def show_landing_page():
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Row 3 - Predicciones
+    # Row 3 - EDA & Predicciones
     nav_col5, nav_col6 = st.columns(2)
     
     with nav_col5:
+        if "📊 EDA" in allowed_pages:
+            st.markdown("""
+                <div class="nav-card">
+                    <div class="nav-card-icon">📊</div>
+                    <div class="nav-card-title">Análisis Exploratorio (EDA)</div>
+                    <div class="nav-card-description">
+                        Radiografía visual del robo de vehículos: patrones, tendencias y zonas críticas con gráficos interactivos.
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("Ver EDA", key="btn_eda", use_container_width=True):
+                st.session_state.current_page = "📊 EDA"
+                st.rerun()
+    
+    with nav_col6:
         if "Predicciones" in allowed_pages:
             st.markdown("""
                 <div class="nav-card">
@@ -654,6 +671,9 @@ elif current_page == "🏛️ Panel de Alcaldías":
 
 elif current_page == "🔍 Verificador de Datos":
     data_checker.show()
+
+elif current_page == "📊 EDA":
+    EDA.show()
 
 elif current_page == "Predicciones":
     predictions_page.show()
