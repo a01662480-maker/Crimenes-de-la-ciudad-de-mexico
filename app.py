@@ -212,14 +212,29 @@ if not st.session_state.logged_in:
     st.markdown("""
         <style>
         .login-container {
-            max-width: 400px;
+            max-width: 450px;
             margin: 0 auto;
             padding: 2rem;
         }
         .login-header {
             text-align: center;
-            color: #0066CC;
             margin-bottom: 2rem;
+        }
+        .login-image {
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 1.5rem;
+        }
+        .login-title {
+            color: #0066CC;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 1rem 0 0.5rem 0;
+        }
+        .login-subtitle {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 0;
         }
         .login-box {
             background: white;
@@ -230,18 +245,25 @@ if not st.session_state.logged_in:
         </style>
     """, unsafe_allow_html=True)
     
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
+        st.markdown('<div class="login-header">', unsafe_allow_html=True)
+        
+        # Display CDMX image
+        try:
+            st.image("CDMX.png", use_container_width=True)
+        except:
+            # Fallback to emoji if image not found
+            st.markdown("<h1>📊</h1>", unsafe_allow_html=True)
+        
         st.markdown("""
-            <div class="login-header">
-                <h1>📊</h1>
-                <h2>Panel de Análisis de Delitos CDMX</h2>
-                <p>Iniciar Sesión</p>
-            </div>
+            <div class="login-title">Panel de Análisis de Delitos CDMX</div>
+            <div class="login-subtitle">Iniciar Sesión</div>
         """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         
         with st.container():
             email = st.text_input("📧 Correo electrónico", key="login_email")
