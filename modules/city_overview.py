@@ -87,7 +87,7 @@ def load_crime_data():
         # Use 'hora' column if available (should be numeric)
         if 'hora' in df.columns:
             df['hour'] = pd.to_numeric(df['hora'], errors='coerce')
-            # If values are 1-24, convert to 0-23
+            # If values are 1-24, convert a 0-23
             if df['hour'].max() == 24:
                 df['hour'] = df['hour'].replace(24, 0)
             # Ensure values are in 0-23 range
@@ -362,7 +362,7 @@ def show():
     
     # Title
     st.title("📈 Panel de Análisis de Delitos CDMX")
-    st.markdown(f'<p class="subtitle">Comprehensive overview of crime trends across Mexico City</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="subtitle">Panorama completo de las tendencias delictivas en la Ciudad de México</p>', unsafe_allow_html=True)
     
     # Load data
     df = load_crime_data()
@@ -420,7 +420,7 @@ def show():
         value=st.session_state.year_range,
         step=1,
         format="%d",
-        help=f"Select a continuous range from {min_year} to {max_year}",
+        help=f"Selecciona un rango continuo de {min_year} a {max_year}",
         key='sidebar_year_slider',
         on_change=sync_from_sidebar
     )
@@ -429,9 +429,9 @@ def show():
     
     # Display selected range
     if start_year_sidebar == end_year_sidebar:
-        st.sidebar.caption(f"📊 Analyzing: **{start_year_sidebar}**")
+        st.sidebar.caption(f"📊 Analizando: **{start_year_sidebar}**")
     else:
-        st.sidebar.caption(f"📊 Analyzing: **{start_year_sidebar} to {end_year_sidebar}** ({end_year_sidebar - start_year_sidebar + 1} years)")
+        st.sidebar.caption(f"📊 Analizando: **{start_year_sidebar} a {end_year_sidebar}** ({end_year_sidebar - start_year_sidebar + 1} años)")
     
     st.sidebar.markdown("---")
     # Violence filter in sidebar - update session state directly
@@ -453,11 +453,11 @@ def show():
     st.sidebar.markdown("---")
     st.sidebar.markdown("### ℹ️ Acerca de")
     st.sidebar.markdown("""
-    This dashboard provides real-time analytics on crime trends across Mexico City's alcaldías.
+    Este tablero proporciona análisis en tiempo real sobre las tendencias delictivas en las alcaldías de la Ciudad de México.
     
-    **Data Source:** FGJ (Fiscalía General de Justicia)
+    **Fuente de Datos:** FGJ (Fiscalía General de Justicia)
     
-    **Last Updated:** Real-time
+    **Última Actualización:** Tiempo real
     """)
     
     # ===============================
@@ -478,7 +478,7 @@ def show():
             value=st.session_state.year_range,
             step=1,
             format="%d",
-            help=f"Select a continuous range from {min_year} to {max_year}",
+            help=f"Selecciona un rango continuo de {min_year} a {max_year}",
             key='top_year_slider',
             on_change=sync_from_top
         )
@@ -559,39 +559,39 @@ def show():
         delta_color = "🔴" if yoy_change > 0 else "🟢"
         st.markdown(f"""
             <div class="kpi-card">
-                <div class="kpi-label">Total Crimes</div>
+                <div class="kpi-label">Delitos Totales</div>
                 <div class="kpi-value">{format_number(total_crimes_current)}</div>
                 <div class="kpi-delta">{delta_color} {format_percentage(yoy_change)}</div>
-                <div class="kpi-caption">in {years_text} (YoY: {latest_year} vs {previous_year})</div>
+                <div class="kpi-caption">en {years_text} (Interanual: {latest_year} vs {previous_year})</div>
             </div>
         """, unsafe_allow_html=True)
     
     with kpi2:
         st.markdown(f"""
             <div class="kpi-card">
-                <div class="kpi-label">Avg Crimes/Month</div>
+                <div class="kpi-label">Promedio Delitos/Mes</div>
                 <div class="kpi-value">{format_number(avg_crimes_per_month)}</div>
-                <div class="kpi-caption">average per month ({years_text})</div>
+                <div class="kpi-caption">promedio por mes ({years_text})</div>
             </div>
         """, unsafe_allow_html=True)
     
     with kpi3:
         st.markdown(f"""
             <div class="kpi-card">
-                <div class="kpi-label">Violent Crimes</div>
+                <div class="kpi-label">Delitos Violentos</div>
                 <div class="kpi-value">{violent_pct:.1f}%</div>
-                <div class="kpi-delta">{format_number(violent_count)} incidents</div>
-                <div class="kpi-caption">of all crimes ({years_text})</div>
+                <div class="kpi-delta">{format_number(violent_count)} incidentes</div>
+                <div class="kpi-caption">del total de delitos ({years_text})</div>
             </div>
         """, unsafe_allow_html=True)
     
     with kpi4:
         st.markdown(f"""
             <div class="kpi-card">
-                <div class="kpi-label">Highest Crime</div>
+                <div class="kpi-label">Mayor Delincuencia</div>
                 <div class="kpi-value">{most_dangerous_alcaldia.title()}</div>
-                <div class="kpi-delta">{format_number(most_dangerous_count)} crimes</div>
-                <div class="kpi-caption">most active alcaldía ({years_text})</div>
+                <div class="kpi-delta">{format_number(most_dangerous_count)} delitos</div>
+                <div class="kpi-caption">alcaldía más activa ({years_text})</div>
             </div>
         """, unsafe_allow_html=True)
     
@@ -696,7 +696,7 @@ def show():
                     peak_hour_count = hourly_crimes.max()
                     insights.append({
                         'icon': '🕐',
-                        'text': f'Hora pico de delitos: {peak_hour:02d}:00-{(peak_hour+1)%24:02d}:00 ({format_number(peak_hour_count)} incidents)',
+                        'text': f'Hora pico de delitos: {peak_hour:02d}:00-{(peak_hour+1)%24:02d}:00 ({format_number(peak_hour_count)} incidentes)',
                         'color': MCKINSEY_COLORS['primary_blue']
                     })
         
@@ -709,7 +709,7 @@ def show():
             peak_day_count = daily_crimes.max()
             insights.append({
                 'icon': '📅',
-                'text': f'{peak_day_name}s are most dangerous ({format_number(peak_day_count)} incidents)',
+                'text': f'{peak_day_name}s son los más peligrosos ({format_number(peak_day_count)} incidentes)',
                 'color': MCKINSEY_COLORS['primary_blue']
             })
         
@@ -740,7 +740,7 @@ def show():
             if concentration_pct > 50:
                 insights.append({
                     'icon': '⚡',
-                    'text': f'{concentration_pct:.0f}% of crimes concentrated in top 3 alcaldías',
+                    'text': f'{concentration_pct:.0f}% de los delitos concentrados en las 3 alcaldías principales',
                     'color': MCKINSEY_COLORS['accent_blue']
                 })
         
@@ -753,7 +753,7 @@ def show():
             })
         
         # Display insights in styled cards
-        for insight in insights[:6]:  # Show up to 6 insights
+        for insight in insights[:6]:  # Show up a 6 insights
             st.markdown(f"""
                 <div style="
                     background: var(--secondary-background-color);
@@ -782,10 +782,10 @@ def show():
                 heatmap_data = valid_heatmap_df.groupby(['day_of_week', 'hour']).size().reset_index(name='count')
                 heatmap_pivot = heatmap_data.pivot(index='day_of_week', columns='hour', values='count').fillna(0)
                 
-                # Reindex to ensure all hours and days are present
+                # Reindex a ensure all hours and days are present
                 heatmap_pivot = heatmap_pivot.reindex(index=range(7), columns=range(24), fill_value=0)
                 
-                # Map day numbers to names
+                # Map day numbers a names
                 day_labels = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
                 heatmap_pivot.index = [day_labels[int(i)] for i in heatmap_pivot.index]
                 
@@ -818,13 +818,13 @@ def show():
                     paper_bgcolor='white',
                     font=dict(family='Inter', color=MCKINSEY_COLORS['text']),
                     xaxis=dict(
-                        title=dict(text='Hour of Day', font=dict(size=12, family='Inter')),
+                        title=dict(text='Hora del Día', font=dict(size=12, family='Inter')),
                         showgrid=False,
                         side='bottom',
                         tickfont=dict(size=9)
                     ),
                     yaxis=dict(
-                        title=dict(text='Day of Week', font=dict(size=12, family='Inter')),
+                        title=dict(text='Día de la Semana', font=dict(size=12, family='Inter')),
                         showgrid=False,
                         tickfont=dict(size=10)
                     ),
@@ -928,7 +928,7 @@ def show():
             # Aggregate by alcaldia and violence category
             alcaldia_violence = filtered_df.groupby(['alcaldia_normalized', 'violence_category']).size().reset_index(name='crimes')
             
-            # Pivot to get violent and non-violent columns
+            # Pivot a get violent and non-violent columns
             alcaldia_pivot = alcaldia_violence.pivot(
                 index='alcaldia_normalized', 
                 columns='violence_category', 
@@ -995,7 +995,7 @@ def show():
             fig.update_layout(barmode='stack')
         
         # Common layout settings
-        x_title = "Number of Crimes" if st.session_state.measurement_type == "Cantidad Total" else "Crime Rate (per 100,000 residents)"
+        x_title = "Número de Delitos" if st.session_state.measurement_type == "Cantidad Total" else "Índice Criminal (por 100,000 habitantes)"
         
         fig.update_layout(
             plot_bgcolor='white',
@@ -1052,7 +1052,7 @@ def show():
                         {row['alcaldia_normalized'].title()}
                     </span><br>
                     <span style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">
-                        {format_number(row['crimes'])} crimes ({pct:.1f}%)
+                        {format_number(row['crimes'])} delitos ({pct:.1f}%)
                     </span>
                 </div>
             """, unsafe_allow_html=True)
@@ -1073,7 +1073,7 @@ def show():
                         {row['alcaldia_normalized'].title()}
                     </span><br>
                     <span style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">
-                        {format_number(row['crimes'])} crimes ({pct:.1f}%)
+                        {format_number(row['crimes'])} delitos ({pct:.1f}%)
                     </span>
                 </div>
             """, unsafe_allow_html=True)
@@ -1158,7 +1158,7 @@ def show():
         # Remove duplicates in case there are any
         agencias_with_crimes = agencias_with_crimes.drop_duplicates(subset=['agencia_normalized'])
         
-        # Add crime counts to agencias
+        # Add crime counts a agencias
         agencia_crime_counts = crime_agencias_with_names.groupby('agencia_normalized').size().reset_index(name='crime_count')
         agencias_with_crimes = agencias_with_crimes.merge(agencia_crime_counts, on='agencia_normalized', how='left')
         agencias_with_crimes['crime_count'] = agencias_with_crimes['crime_count'].fillna(0).astype(int)
@@ -1409,7 +1409,7 @@ def show():
             tooltip={
                 "html": """
                 <div style="font-family: Inter, sans-serif; padding: 8px;">
-                    <b style="color: #0066CC;">{agencia}</b><br/>
+                    <b style="color: #0066CC;">{agencia_x}</b><br/>
                     <span style="font-size: 0.9em; color: #5A6C7D;">
                         {direccion}
                     </span><br/>
@@ -1679,16 +1679,16 @@ def show():
     with st.expander("🔍 Información de Depuración"):
         st.write(f"Total records loaded: {len(df):,}")
         st.write(f"Filtered records: {len(filtered_df):,}")
-        st.write(f"Date range: {df['fecha_hecho'].min()} to {df['fecha_hecho'].max()}")
+        st.write(f"Date range: {df['fecha_hecho'].min()} a {df['fecha_hecho'].max()}")
         st.write(f"Alcaldías: {df['alcaldia_normalized'].nunique()}")
-        st.write(f"Selected range: {start_year} to {end_year}")
+        st.write(f"Selected range: {start_year} a {end_year}")
         
         # Hour data analysis
         if 'hour' in df.columns:
             valid_hours = df[df['hour'].notna()]['hour']
             st.write(f"Hour data available: {len(valid_hours):,} records ({len(valid_hours)/len(df)*100:.1f}%)")
             if len(valid_hours) > 0:
-                st.write(f"Hour range: {valid_hours.min():.0f} to {valid_hours.max():.0f}")
+                st.write(f"Hour range: {valid_hours.min():.0f} a {valid_hours.max():.0f}")
                 st.write(f"Sample hours: {valid_hours.head(10).tolist()}")
 
 
