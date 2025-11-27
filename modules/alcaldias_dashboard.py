@@ -16,6 +16,15 @@ SUPABASE_TABLE_CUADRANTS = "cuadrantes"
 # ===============================
 # Helper Functions
 # ===============================
+def get_spanish_month_name(date):
+    """Convert date to Spanish month abbreviation format"""
+    month_names = {
+        1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr',
+        5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+        9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
+    }
+    return f"{month_names[date.month]} {date.year}"
+
 def normalize_alcaldia_name(name):
     """Normalize alcaldía names for matching"""
     if pd.isna(name):
@@ -500,216 +509,228 @@ def show():
             st.markdown("</div>", unsafe_allow_html=True)
         
         st.divider()
-        # ===============================
-        # VISUALIZATIONS
-        # ===============================
-        st.subheader("📈 Visualizaciones")
-        
+# ===============================
+# UPDATED VISUALIZATIONS FOR SECTION 1
+# Replace the viz_col1 and viz_col2 sections (around lines 350-550)
+# ===============================
+
         viz_col1, viz_col2 = st.columns(2)
         
+        # ===============================
+        # VIZ COL 1: CLOCK/RADIAL CHART (24-HOUR)
+        # ===============================
         with viz_col1:
-            st.markdown("**Delitos Diarios**")
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #F8F9FA 0%, #ffffff 100%);
+                            border-left: 3px solid #0066CC;
+                            border-radius: 8px;
+                            padding: 1.2rem;
+                            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.08);
+                            height: 100%;">
+            """, unsafe_allow_html=True)
             
-            # Toggle for breakdown
-            show_breakdown = st.checkbox("Mostrar desglose por violencia", key="violence_breakdown_toggle")
+            st.markdown("**Delitos por Hora**")
             
-            if not last_30_df.empty:
-                # Prepare daily crime data
-                daily_crimes = last_30_df.groupby('date').size().reset_index(name='total')
-                daily_crimes['date'] = pd.to_datetime(daily_crimes['date'])
-                daily_crimes = daily_crimes.sort_values('date')
+            if not last_30_df.empty and 'hour' in last_30_df.columns:
+                # Filter valid hours
+                hourly_df = last_30_df[last_30_df['hour'].notna()].copy()
                 
-                # Format dates as "Day dd/mm"
-                daily_crimes['date_label'] = daily_crimes['date'].dt.strftime('%a %d/%m')
-                
-                if show_breakdown:
-                    # Count by violence category per day
-                    violent_daily = last_30_df[last_30_df['violence_category'] == 'violent'].groupby('date').size().reset_index(name='violent')
-                    non_violent_daily = last_30_df[last_30_df['violence_category'] == 'non_violent'].groupby('date').size().reset_index(name='non_violent')
+                if not hourly_df.empty:
+                    # Count crimes per hour
+                    hourly_counts = hourly_df.groupby('hour').size().reset_index(name='count')
                     
-                    # Convert date columns to datetime before merging
-                    violent_daily['date'] = pd.to_datetime(violent_daily['date'])
-                    non_violent_daily['date'] = pd.to_datetime(non_violent_daily['date'])
+                    # Ensure all 24 hours are present (fill missing with 0)
+                    all_hours = pd.DataFrame({'hour': range(24)})
+                    hourly_counts = all_hours.merge(hourly_counts, on='hour', how='left').fillna(0)
+                    hourly_counts['count'] = hourly_counts['count'].astype(int)
                     
-                    # Merge with main daily data
-                    daily_crimes = daily_crimes.merge(violent_daily, on='date', how='left')
-                    daily_crimes = daily_crimes.merge(non_violent_daily, on='date', how='left')
-                    daily_crimes['violent'] = daily_crimes['violent'].fillna(0)
-                    daily_crimes['non_violent'] = daily_crimes['non_violent'].fillna(0)
-                    
-                    # Create line chart with breakdown
+                    # Create radial/polar bar chart
                     import plotly.graph_objects as go
+                    import numpy as np
+                    
+                    # Prepare data
+                    hours = hourly_counts['hour'].values
+                    counts = hourly_counts['count'].values
+                    
+                    # Create theta (angles) - convert hours to degrees
+                    # Hour 0 (midnight) at top, going clockwise
+                    theta = (hours * 15) - 90  # 360/24 = 15 degrees per hour, -90 to start at top
+                    
+                    # Normalize counts for color mapping
+                    max_count = counts.max() if counts.max() > 0 else 1
+                    normalized_counts = counts / max_count
+                    
+                    # Create color scale (light blue to dark blue)
+                    colors = [f'rgba({int(77 + (0-77)*norm)}, {int(148 + (61-148)*norm)}, {int(217 + (130-217)*norm)}, 0.8)' 
+                              for norm in normalized_counts]
                     
                     fig = go.Figure()
                     
-                    fig.add_trace(go.Scatter(
-                        x=daily_crimes['date_label'],
-                        y=daily_crimes['violent'],
-                        mode='lines+markers',
-                        name='Con Violencia',
-                        line=dict(color='#003d82', width=2.5),
-                        marker=dict(size=6)
-                    ))
-                    
-                    fig.add_trace(go.Scatter(
-                        x=daily_crimes['date_label'],
-                        y=daily_crimes['non_violent'],
-                        mode='lines+markers',
-                        name='Sin Violencia',
-                        line=dict(color='#6fa8dc', width=2.5),
-                        marker=dict(size=6)
+                    # Add bars in polar coordinates
+                    fig.add_trace(go.Barpolar(
+                        r=counts,
+                        theta=hours * 15,  # Convert hours to degrees (0-360)
+                        width=14,  # Width of each bar in degrees
+                        marker=dict(
+                            color=colors,
+                            line=dict(color='white', width=1)
+                        ),
+                        hovertemplate='<b>Hora: %{theta}:00</b><br>Delitos: %{r}<extra></extra>',
+                        customdata=hours,
+                        hoverinfo='text',
+                        text=[f'{int(h):02d}:00<br>{int(c)} delitos' for h, c in zip(hours, counts)],
+                        showlegend=False
                     ))
                     
                     fig.update_layout(
-                        xaxis_title="Fecha",
-                        yaxis_title="Número de Delitos",
-                        hovermode='x unified',
-                        plot_bgcolor='white',
-                        height=400,
-                        margin=dict(l=40, r=40, t=20, b=80),
-                        legend=dict(
-                            orientation="h",
-                            yanchor="bottom",
-                            y=1.02,
-                            xanchor="right",
-                            x=1
+                        polar=dict(
+                            radialaxis=dict(
+                                visible=True,
+                                showticklabels=False,
+                                showline=False,
+                                gridcolor='#e0e0e0',
+                                range=[0, max_count * 1.1]
+                            ),
+                            angularaxis=dict(
+                                tickmode='array',
+                                tickvals=[0, 45, 90, 135, 180, 225, 270, 315],
+                                ticktext=['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+                                direction='clockwise',
+                                rotation=90,
+                                tickfont=dict(size=10, color='#333')
+                            ),
+                            bgcolor='rgba(0,0,0,0)'
                         ),
-                        xaxis=dict(
-                            tickangle=-45,
-                            showgrid=True,
-                            gridcolor='#f0f0f0'
-                        ),
-                        yaxis=dict(
-                            showgrid=True,
-                            gridcolor='#f0f0f0'
-                        )
+                        height=420,
+                        margin=dict(l=60, r=60, t=60, b=60),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)'
                     )
                     
+                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+                    
+                    # Find peak hour
+                    peak_hour_idx = hourly_counts['count'].idxmax()
+                    peak_hour = int(hourly_counts.loc[peak_hour_idx, 'hour'])
+                    peak_count = int(hourly_counts.loc[peak_hour_idx, 'count'])
+                    
+                    st.caption(f"⏰ Hora pico: **{peak_hour:02d}:00** ({peak_count} delitos)")
                 else:
-                    # Create simple line chart with total crimes
-                    import plotly.graph_objects as go
-                    
-                    fig = go.Figure()
-                    
-                    fig.add_trace(go.Scatter(
-                        x=daily_crimes['date_label'],
-                        y=daily_crimes['total'],
-                        mode='lines+markers',
-                        name='Total de Delitos',
-                        line=dict(color='#0066CC', width=3),
-                        marker=dict(size=7)
-                    ))
-                    
-                    fig.update_layout(
-                        xaxis_title="Fecha",
-                        yaxis_title="Número de Delitos",
-                        hovermode='x',
-                        plot_bgcolor='white',
-                        height=400,
-                        margin=dict(l=40, r=40, t=20, b=80),
-                        showlegend=False,
-                        xaxis=dict(
-                            tickangle=-45,
-                            showgrid=True,
-                            gridcolor='#f0f0f0'
-                        ),
-                        yaxis=dict(
-                            showgrid=True,
-                            gridcolor='#f0f0f0'
-                        )
-                    )
-                
-                st.plotly_chart(fig, use_container_width=True)
+                    st.info("No hay datos de hora disponibles para este período")
             else:
-                st.info("No hay datos disponibles para graficar")
+                st.info("No hay datos de hora disponibles")
+            
+            st.markdown("</div>", unsafe_allow_html=True)
         
+# ===============================
+# STYLISH HTML TABLE FOR DELITOS COMUNES
+# ===============================
+
         with viz_col2:
-            st.markdown("**Top 5 Delitos**")
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #F8F9FA 0%, #ffffff 100%);
+                            border-left: 3px solid #0066CC;
+                            border-radius: 8px;
+                            padding: 1.2rem;
+                            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.08);
+                            height: 100%;">
+            """, unsafe_allow_html=True)
+            
+            st.markdown("**Delitos Comunes**")
             
             if not last_30_df.empty:
-                # Get top 5 crimes
-                top_crimes = last_30_df['delito'].value_counts().head(5).reset_index()
+                # Get top crimes (up to 10)
+                top_crimes = last_30_df['delito'].value_counts().head(10).reset_index()
                 top_crimes.columns = ['delito', 'count']
                 
-                # Get violence category for each crime (most common category for that crime type)
-                crime_violence = []
-                for crime in top_crimes['delito']:
-                    crime_data = last_30_df[last_30_df['delito'] == crime]
-                    most_common_category = crime_data['violence_category'].mode()[0] if len(crime_data) > 0 else 'unknown'
-                    crime_violence.append(most_common_category)
+                # Create DataFrame for AgGrid
+                display_df = pd.DataFrame({
+                    '#': range(1, len(top_crimes) + 1),
+                    'Tipo de Delito': top_crimes['delito'].str.title(),
+                    'Cantidad': top_crimes['count']
+                })
                 
-                top_crimes['violence_category'] = crime_violence
+                # Import AgGrid
+                from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
                 
-                # Assign colors based on violence category
-                colors = []
-                for category in top_crimes['violence_category']:
-                    if category == 'violent':
-                        colors.append('#003d82')  # Dark blue
-                    elif category == 'non_violent':
-                        colors.append('#6fa8dc')  # Light blue
-                    else:
-                        colors.append('#999999')  # Gray for unknown
+                # Configure grid options
+                gb = GridOptionsBuilder.from_dataframe(display_df)
                 
-                # Truncate long crime names for display
-                top_crimes['delito_display'] = top_crimes['delito'].apply(
-                    lambda x: x[:40] + '...' if len(x) > 40 else x
+                # Column configuration
+                gb.configure_column("#", 
+                    width=60,
+                    cellStyle={'textAlign': 'center', 'fontWeight': '700', 'color': '#0066CC'}
                 )
                 
-                # Create horizontal bar chart
-                import plotly.graph_objects as go
+                gb.configure_column("Tipo de Delito", 
+                    width=350,
+                    cellStyle={'fontWeight': '500', 'color': '#333'}
+                )
                 
-                fig = go.Figure()
+                gb.configure_column("Cantidad", 
+                    width=100,
+                    cellStyle={'textAlign': 'right', 'fontWeight': '700', 'color': '#003d82'}
+                )
                 
-                fig.add_trace(go.Bar(
-                    y=top_crimes['delito_display'][::-1],  # Reverse for top-to-bottom display
-                    x=top_crimes['count'][::-1],
-                    orientation='h',
-                    marker=dict(
-                        color=colors[::-1],
-                        line=dict(color='white', width=1)
-                    ),
-                    text=top_crimes['count'][::-1],
-                    textposition='outside',
-                    hovertemplate='<b>%{y}</b><br>' +
-                                  'Cantidad: <b>%{x}</b><br>' +
-                                  '<extra></extra>'
-                ))
+                # Grid options
+                gb.configure_grid_options(
+                    domLayout='normal',
+                    enableCellTextSelection=True,
+                    rowHeight=45,
+                    headerHeight=50
+                )
                 
-                fig.update_layout(
-                    xaxis_title="Número de Incidentes",
-                    yaxis_title="",
-                    plot_bgcolor='white',
+                gridOptions = gb.build()
+                
+                # Custom CSS for McKinsey styling
+                custom_css = {
+                    ".ag-header-cell-label": {
+                        "justify-content": "center",
+                        "font-weight": "600",
+                        "color": "white",
+                        "text-transform": "uppercase",
+                        "letter-spacing": "0.5px",
+                        "font-size": "0.85rem"
+                    },
+                    ".ag-header": {
+                        "background": "linear-gradient(90deg, #0066CC 0%, #004C99 100%)",
+                        "border-bottom": "2px solid #003d82"
+                    },
+                    ".ag-row-odd": {
+                        "background": "#f8f9fa"
+                    },
+                    ".ag-row-even": {
+                        "background": "white"
+                    },
+                    ".ag-row-hover": {
+                        "background": "#e3f2fd !important"
+                    },
+                    ".ag-cell": {
+                        "border-right": "none",
+                        "font-family": "Arial, sans-serif"
+                    }
+                }
+                
+                # Display AgGrid
+                AgGrid(
+                    display_df,
+                    gridOptions=gridOptions,
+                    custom_css=custom_css,
                     height=400,
-                    margin=dict(l=10, r=40, t=20, b=40),
-                    showlegend=False,
-                    xaxis=dict(
-                        showgrid=True,
-                        gridcolor='#f0f0f0',
-                        zeroline=False
-                    ),
-                    yaxis=dict(
-                        showgrid=False,
-                        automargin=True
-                    ),
-                    hoverlabel=dict(
-                        bgcolor="white",
-                        font_size=12,
-                        font_family="Arial"
-                    )
+                    allow_unsafe_jscode=True,
+                    update_mode=GridUpdateMode.NO_UPDATE,
+                    theme='streamlit',
+                    fit_columns_on_grid_load=True
                 )
                 
-                st.plotly_chart(fig, use_container_width=True)
+                # Add caption
+                total_crime_types = last_30_df['delito'].nunique()
+                st.caption(f"📋 Mostrando {len(top_crimes)} de {total_crime_types} tipos de delitos")
                 
-                # Add legend for colors
-                st.caption("🔵 Azul oscuro = Con violencia | 🔵 Azul claro = Sin violencia")
             else:
-                st.info("No hay datos disponibles para graficar")
-        
-    else:
-        st.warning("No hay datos recientes disponibles para esta alcaldía")
-    
-    st.divider()
-    
+                st.info("No hay datos disponibles")
+            
+            st.markdown("</div>", unsafe_allow_html=True)
     # ===============================
     # SECTION 2: HISTORICAL TRENDS
     # ===============================
@@ -833,7 +854,9 @@ def show():
         monthly_crimes = filtered_alcaldia_df.groupby([filtered_alcaldia_df['fecha_hecho'].dt.to_period('M')]).size().reset_index(name='total')
         monthly_crimes['fecha_hecho'] = monthly_crimes['fecha_hecho'].dt.to_timestamp()
         monthly_crimes = monthly_crimes.sort_values('fecha_hecho')
-        monthly_crimes['date_label'] = monthly_crimes['fecha_hecho'].dt.strftime('%b %Y')
+        
+        # Apply Spanish month names
+        monthly_crimes['date_label'] = monthly_crimes['fecha_hecho'].apply(get_spanish_month_name)
         
         if show_breakdown_historical:
             # By violence category
