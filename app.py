@@ -241,6 +241,14 @@ if not st.session_state.logged_in:
         if os.path.exists("CDMX.png"):
             st.image("CDMX.png", use_container_width=True)
         
+        # Add Thales logo (centered)
+        st.markdown("<br>", unsafe_allow_html=True)
+        logo_col1, logo_col2, logo_col3 = st.columns([1, 1, 1])
+        with logo_col2:
+            if os.path.exists("Thales-logo.png"):
+                st.image("Thales-logo.png", use_container_width=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
         st.markdown("""
             <div class="login-header">
                 <h2>Panel de Análisis de Delitos CDMX</h2>
@@ -568,6 +576,12 @@ def show_landing_page():
 # ===============================
 # Sidebar Navigation
 # ===============================
+
+# Add Thales logo at top of sidebar
+if os.path.exists("Thales-logo.png"):
+    st.sidebar.image("Thales-logo.png", use_container_width=True)
+    st.sidebar.markdown("---")
+
 st.sidebar.title("🔍 Navegación")
 
 # User info and logout button
