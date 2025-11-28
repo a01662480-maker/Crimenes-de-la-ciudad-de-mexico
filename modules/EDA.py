@@ -21,31 +21,32 @@ def show():
     }
 
     .card-desc {
-        background: #ffffff;
+        background: #f8f9fa;
         padding: 20px;
         margin-top: 15px;
-        border-radius: 15px;
-        box-shadow: 0 4px 18px rgba(0,0,0,0.12);
-        font-size: 19px;
-        font-weight: 300;
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        font-size: 16px;
+        font-weight: 400;
         font-family: 'Segoe UI', sans-serif;
         color: #444;
-        line-height: 1.55;
+        line-height: 1.6;
     }
 
-    .dot-container {
-        text-align: center;
-        margin-top: 15px;
+    .graph-divider {
+        height: 2px;
+        background: linear-gradient(90deg, transparent 0%, #0066CC 50%, transparent 100%);
+        margin: 40px 0;
+        opacity: 0.4;
     }
 
-    .dot {
-        font-size: 22px;
-        margin: 0 4px;
-        color: #bbb;
-    }
-
-    .dot.active {
-        color: #333;
+    .eda-image-container img {
+        max-height: 450px;
+        width: auto;
+        margin: 0 auto;
+        display: block;
+        object-fit: contain;
     }
 
     </style>
@@ -111,73 +112,19 @@ def show():
 
 
     # ==========================
-    #   SESSION STATE INDEX
+    #   MOSTRAR TODAS LAS IMÁGENES
     # ==========================
-    if "eda_index" not in st.session_state:
-        st.session_state.eda_index = 0
-
-
-    # ==========================
-    #   FUNCIONES DE NAVEGACIÓN
-    # ==========================
-    def next_image():
-        st.session_state.eda_index = (st.session_state.eda_index + 1) % len(imagenes)
-
-    def prev_image():
-        st.session_state.eda_index = (st.session_state.eda_index - 1) % len(imagenes)
-
-
-    # ==========================
-    #   MOSTRAR IMAGEN CON ANIMACIÓN
-    # ==========================
-    filename, img_path, desc = imagenes[st.session_state.eda_index]
-
-    st.markdown('<div class="fade-in">', unsafe_allow_html=True)
-    st.image(img_path, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-    # ==========================
-    #   DESCRIPCIÓN — AHORA CON MARKDOWN
-    # ==========================
-    st.markdown('<div class="card-desc fade-in">', unsafe_allow_html=True)
-    st.markdown(desc, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-    # ==========================
-    #   INDICADORES TIPO "•••"
-    # ==========================
-    dots_html = '<div class="dot-container">'
-    for i in range(len(imagenes)):
-        dots_html += (
-            f"<span class='dot {'active' if i == st.session_state.eda_index else ''}'>•</span>"
-        )
-    dots_html += "</div>"
-
-    st.markdown(dots_html, unsafe_allow_html=True)
-
-
-    # ==========================
-    #   BOTONES DE NAVEGACIÓN
-    # ==========================
-    col1, col2, col3 = st.columns([1,2,1])
-
-    with col1:
-        if st.button("⬅ Anterior", use_container_width=True, key="eda_prev"):
-            prev_image()
-            st.rerun()
-
-    with col3:
-        if st.button("Siguiente ➡", use_container_width=True, key="eda_next"):
-            next_image()
-            st.rerun()
-
-
-    # ==========================
-    #   CONTADOR
-    # ==========================
-    st.markdown(
-        f"<p style='text-align:center; opacity:0.6;'>Imagen {st.session_state.eda_index + 1} de {len(imagenes)}</p>",
-        unsafe_allow_html=True
-    )
+    for idx, (filename, img_path, desc) in enumerate(imagenes):
+        # Display image with fade-in animation and max-height constraint
+        st.markdown('<div class="fade-in eda-image-container">', unsafe_allow_html=True)
+        st.image(img_path, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Display description in card
+        st.markdown('<div class="card-desc fade-in">', unsafe_allow_html=True)
+        st.markdown(desc, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Add blue divider after description (except for last image)
+        if idx < len(imagenes) - 1:
+            st.markdown('<div class="graph-divider"></div>', unsafe_allow_html=True)
