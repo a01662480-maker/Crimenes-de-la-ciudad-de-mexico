@@ -492,6 +492,18 @@ def show_landing_page():
     
     st.markdown("<br>", unsafe_allow_html=True)
     
+    # ===============================
+    # VIDEO SECTION
+    # ===============================
+    st.markdown("### 🎬 Introducción al Sistema")
+    
+    # Use YouTube URL
+    video_col1, video_col2, video_col3 = st.columns([1, 3, 1])
+    with video_col2:
+        st.video("https://youtu.be/qECT7Q5Q4iU")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
     # Navigation Cards Section
     st.markdown("### 🧭 Explorar el Dashboard")
     st.markdown("Selecciona una sección para comenzar tu análisis:")
